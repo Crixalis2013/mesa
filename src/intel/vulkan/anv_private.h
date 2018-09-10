@@ -151,6 +151,8 @@ struct gen_l3_config;
 #define ANV_HZ_FC_VAL 1.0f
 
 #define MAX_VBS         28
+#define MAX_XFB_BUFFERS  4
+#define MAX_XFB_STREAMS  4
 #define MAX_SETS         8
 #define MAX_RTS          8
 #define MAX_VIEWPORTS   16
@@ -1769,6 +1771,7 @@ enum anv_cmd_dirty_bits {
    ANV_CMD_DIRTY_PIPELINE                          = 1 << 9,
    ANV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
    ANV_CMD_DIRTY_RENDER_TARGETS                    = 1 << 11,
+   ANV_CMD_DIRTY_XFB_ENABLE                        = 1 << 12,
 };
 typedef uint32_t anv_cmd_dirty_mask_t;
 
@@ -1902,6 +1905,12 @@ anv_pipe_invalidate_bits_for_access_flags(VkAccessFlags flags)
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
    VkDeviceSize                                 offset;
+};
+
+struct anv_xfb_binding {
+   struct anv_buffer *                          buffer;
+   VkDeviceSize                                 offset;
+   VkDeviceSize                                 size;
 };
 
 #define ANV_PARAM_PUSH(offset)         ((1 << 16) | (uint32_t)(offset))
@@ -2096,6 +2105,8 @@ struct anv_cmd_state {
    VkRect2D                                     render_area;
    uint32_t                                     restart_index;
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
+   bool                                         xfb_enabled;
+   struct anv_xfb_binding                       xfb_bindings[MAX_XFB_BUFFERS];
    VkShaderStageFlags                           push_constant_stages;
    struct anv_push_constants *                  push_constants[MESA_SHADER_STAGES];
    struct anv_state                             binding_tables[MESA_SHADER_STAGES];
@@ -2513,6 +2524,8 @@ struct anv_pipeline {
       bool                                      instanced;
       uint32_t                                  instance_divisor;
    } vb[MAX_VBS];
+
+   uint8_t                                      xfb_used;
 
    bool                                         primitive_restart;
    uint32_t                                     topology;
