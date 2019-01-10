@@ -128,12 +128,23 @@ nir_gather_xfb_info(const nir_shader *shader, void *mem_ctx)
 
       unsigned location = var->data.location;
 
-      if (var->data.explicit_offset) {
+      /* In order to know if we have a array of blocks can't be done just by
+       * checking if we have an interface type and is an array, because due
+       * splitting we could end on a case were we received a splitted struct
+       * that contains an array.
+       */
+      bool is_array_block = glsl_type_is_array(var->type) &&
+         var->interface_type != NULL &&
+         glsl_get_array_element(var->type) == var->interface_type;
+
+      if (var->data.explicit_offset && !is_array_block) {
          unsigned offset = var->data.offset;
          add_var_xfb_outputs(xfb, var, var->data.xfb_buffer,
                              &location, &offset, var->type);
-      } else if (glsl_type_is_array(var->type) &&
-                 glsl_type_is_struct(glsl_without_array(var->type))) {
+      } else if (is_array_block) {
+         assert(glsl_type_is_array(var->type));
+         assert(glsl_type_is_struct(glsl_without_array(var->type)));
+
          unsigned aoa_size = glsl_get_aoa_size(var->type);
          const struct glsl_type *stype = glsl_without_array(var->type);
          unsigned nfields = glsl_get_length(stype);
